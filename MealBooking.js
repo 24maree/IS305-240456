@@ -7,6 +7,12 @@ Description: A JavaScript program demonstrating classes,
 objects, constructors, private fields and methods.
 */
 
+// Meal prices in Kina (K), keyed by meal type
+const MEAL_PRICES = {
+    Breakfast: 10.00,
+    Lunch: 15.00,
+    Dinner: 20.00
+};
 
 //Declaring a class named MealBooking
 class MealBooking {
@@ -30,7 +36,7 @@ class MealBooking {
 
         // Every new booking starts as Pending
         this.#bookingStatus = "Pending";
-    }
+    } 
 
     //Getters and Setters: 
 
@@ -126,6 +132,54 @@ class MealBooking {
         const pricePerMeal = MEAL_PRICES[this.#mealType];
         const total = pricePerMeal * this.#quantity;
         return total;
+    }
+
+        // Re-checks every field on this booking and rejects it if anything is
+    // missing or invalid. The setters already validate each value as soon
+    // as it is assigned, so this method mainly exists as an explicit,
+    // callable check and as a safety net.
+    validate() {
+        const validTypes = Object.keys(MEAL_PRICES);
+
+        if (!this.#studentId || this.#studentId.toString().trim() === "") {
+            throw new Error("Student ID is required.");
+        }
+        if (!this.#studentName || this.#studentName.trim() === "") {
+            throw new Error("Student name is required.");
+        }
+        if (!this.#mealDate || this.#mealDate.trim() === "") {
+            throw new Error("Meal date is required.");
+        }
+        if (!validTypes.includes(this.#mealType)) {
+            throw new Error(`Meal type must be one of: ${validTypes.join(", ")}`);
+        }
+        if (!Number.isInteger(this.#quantity) || this.#quantity <= 0) {
+            throw new Error("Quantity must be a whole number greater than 0.");
+        }
+
+        return true;
+    }
+
+    // Moves the booking from Pending to Confirmed.
+    // A booking that has already been cancelled cannot be confirmed.
+    confirmBooking() {
+        if (this.#bookingStatus === "Cancelled") {
+            throw new Error("A cancelled booking cannot be confirmed.");
+        }
+        if (this.#bookingStatus === "Confirmed") {
+            throw new Error("This booking is already confirmed.");
+        }
+        this.#bookingStatus = "Confirmed";
+        return this.#bookingStatus;
+    }
+
+    // Moves the booking to Cancelled, from either Pending or Confirmed.
+    cancelBooking() {
+        if (this.#bookingStatus === "Cancelled") {
+            throw new Error("This booking is already cancelled.");
+        }
+        this.#bookingStatus = "Cancelled";
+        return this.#bookingStatus;
     }
 
     // Return the booking information as a formatted summary
