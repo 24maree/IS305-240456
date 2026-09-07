@@ -212,7 +212,7 @@ Description: A JavaScript program demonstrating classes, objects,
 constructors, private fields, methods, and one object (MealBooking)
 holding a reference to another object (Student).
 */
-
+/*
 const Student = require("./Student");
 
 // Meal prices in Kina (K), keyed by meal type
@@ -399,3 +399,148 @@ class MealBooking {
 }
 
 module.exports = MealBooking;
+
+/*
+ * MealBooking.js
+ * Represents a single meal booking made by a Student.
+ * Lab 1: booking validation, cost calculation, booking status.
+ * Lab 2: stores a Student object instead of raw id/name fields.
+ * Lab 3: pays through a DiningAccount (or any subclass) polymorphically -
+ *        this class contains no account-type-specific payment logic.
+ */
+
+const Student = require("./Student");
+
+const MEAL_PRICES = Object.freeze({
+  Breakfast: 10,
+  Lunch: 15,
+  Dinner: 20,
+});
+
+class MealBooking {
+  #student;
+  #mealDate;
+  #mealType;
+  #quantity;
+  #dietaryNote;
+  #bookingStatus;
+  #paid;
+
+  constructor(student, mealDate, mealType, quantity, dietaryNote = "None") {
+    if (!(student instanceof Student)) {
+      throw new Error("A valid Student object is required to create a booking.");
+    }
+    if (!mealDate || mealDate.toString().trim() === "") {
+      throw new Error("Meal date cannot be empty.");
+    }
+    if (!Object.prototype.hasOwnProperty.call(MEAL_PRICES, mealType)) {
+      throw new Error("Meal type must be Breakfast, Lunch or Dinner.");
+    }
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      throw new Error("Quantity must be at least 1.");
+    }
+
+    this.#student = student;
+    this.#mealDate = mealDate.toString().trim();
+    this.#mealType = mealType;
+    this.#quantity = quantity;
+    this.#dietaryNote = dietaryNote && dietaryNote.trim() !== "" ? dietaryNote.trim() : "None";
+    this.#bookingStatus = "Pending";
+    this.#paid = false;
+  }
+
+  // ---------- Accessors ----------
+  get student() {
+    return this.#student;
+  }
+
+  get mealDate() {
+    return this.#mealDate;
+  }
+
+  get mealType() {
+    return this.#mealType;
+  }
+
+  get quantity() {
+    return this.#quantity;
+  }
+
+  get dietaryNote() {
+    return this.#dietaryNote;
+  }
+
+  get bookingStatus() {
+    return this.#bookingStatus;
+  }
+
+  isPaid() {
+    return this.#paid;
+  }
+
+  // ---------- Core behaviour ----------
+  calculateTotal() {
+    return MEAL_PRICES[this.#mealType] * this.#quantity;
+  }
+
+  confirmBooking() {
+    this.#bookingStatus = "Confirmed";
+  }
+
+  cancelBooking() {
+    this.#bookingStatus = "Cancelled";
+  }
+
+  // Lab 3: polymorphic payment - works with a DiningAccount,
+  // RewardsDiningAccount or CreditDiningAccount without any
+  // account-specific branching here.
+  processPayment(diningAccount) {
+    if (!diningAccount || typeof diningAccount.payForMeal !== "function") {
+      throw new Error("A valid dining account is required to process payment.");
+    }
+    if (this.#paid || this.#bookingStatus === "Confirmed") {
+      console.log("Payment rejected: this booking has already been paid.");
+      return false;
+    }
+    if (this.#bookingStatus === "Cancelled") {
+      console.log("Payment rejected: this booking has been cancelled.");
+      return false;
+    }
+
+    const total = this.calculateTotal();
+    const success = diningAccount.payForMeal(
+      total,
+      `${this.#mealType} booking - ${this.#mealDate}`
+    );
+
+    if (success) {
+      this.#paid = true;
+      this.confirmBooking();
+      console.log("Payment successful. Booking confirmed.");
+    } else {
+      console.log("Payment failed. Booking remains Pending.");
+    }
+    return success;
+  }
+
+  getSummary() {
+    console.log(`Student: ${this.#student.getFullName()} (${this.#student.studentId})`);
+    console.log(`Meal: ${this.#mealType} x ${this.#quantity}`);
+    console.log(`Date: ${this.#mealDate}`);
+    console.log(`Dietary note: ${this.#dietaryNote}`);
+    console.log(`Status: ${this.#bookingStatus}`);
+    console.log(`Total cost: K${this.calculateTotal().toFixed(2)}`);
+  }
+
+  static isDuplicate(bookings, studentId, mealDate, mealType) {
+    return bookings.some(
+      (b) =>
+        b.student.studentId === studentId &&
+        b.mealDate === mealDate &&
+        b.mealType === mealType &&
+        b.bookingStatus !== "Cancelled"
+    );
+  }
+}
+
+module.exports = { MealBooking, MEAL_PRICES };
